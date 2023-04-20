@@ -45,9 +45,9 @@ gss_clean.satjob = (
 def cat_and_reorder(feature, levels):
     return (
         feature
+            .fillna('not answered')
             .astype('category')
-            .cat.reorder_categories(levels)
-            .cat.as_ordered()
+            .cat.reorder_categories(levels + ['not answered'])
     )
 
 for col in ['relationship', 'male_breadwinner', 'child_suffer']:
