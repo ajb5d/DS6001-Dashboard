@@ -8,25 +8,53 @@ gss = pd.read_csv(
                'NOT SURE','DK', 'IAP, DK, NA, uncodeable',
                '.a', "CAN'T CHOOSE"])
 
-mycols = ['id', 'wtss', 'sex', 'educ', 'region', 'age', 'coninc',
-          'prestg10', 'mapres10', 'papres10', 'sei10', 'satjob',
-          'fechld', 'fefam', 'fepol', 'fepresch', 'meovrwrk'] 
-gss_clean = gss[mycols]
-gss_clean = gss_clean.rename({'wtss':'weight', 
-                              'educ':'education', 
-                              'coninc':'income', 
-                              'prestg10':'job_prestige',
-                              'mapres10':'mother_job_prestige', 
-                              'papres10':'father_job_prestige', 
-                              'sei10':'socioeconomic_index', 
-                              'fechld':'relationship', 
-                              'fefam':'male_breadwinner', 
-                              'fehire':'hire_women', 
-                              'fejobaff':'preference_hire_women', 
-                              'fepol':'men_bettersuited', 
-                              'fepresch':'child_suffer',
-                              'meovrwrk':'men_overwork'},axis=1)
-gss_clean.age = gss_clean.age.replace({'89 or older':'89'})
-gss_clean.age = gss_clean.age.astype('float')
+keep_cols = {
+    'sex': 'sex',
+    'educ': 'education',
+    'region': 'region',
+    'coninc': 'income',
+    'prestg10': 'job_prestige',
+    'sei10': 'socioeconomic_index',
+    'satjob': 'satjob',
+    'fechld': 'relationship',
+    'fefam': 'male_breadwinner',
+    'fepol': 'men_bettersuited',
+    'fepresch': 'child_suffer',
+    'meovrwrk': 'men_overwork'
+}
+
+gss_clean = gss[keep_cols.keys()]
+gss_clean = gss_clean.rename(keep_cols,axis=1)
+
+gss_clean.education = pd.qcut(
+    gss_clean.education,
+    q = 4,
+    labels = ['Lowest Quartile', 'Q2', 'Q3', 'Highest Quartile']
+)
+
+gss_clean.satjob = (
+    gss_clean.satjob
+        .astype('category')
+        .cat.reorder_categories([
+            'very dissatisfied', 
+            'a little dissat', 
+            'mod. satisfied', 
+            'very satisfied'])
+        .cat.as_ordered())
+
+def cat_and_reorder(feature, levels):
+    return (
+        feature
+            .astype('category')
+            .cat.reorder_categories(levels)
+            .cat.as_ordered()
+    )
+
+for col in ['relationship', 'male_breadwinner', 'child_suffer']:
+    gss_clean[col] = cat_and_reorder(gss_clean[col], ['strongly disagree', 'disagree', 'agree', 'strongly agree'])
+
+gss_clean['men_bettersuited'] = cat_and_reorder(gss_clean['men_bettersuited'], ['disagree', 'agree'])
+gss_clean['men_overwork'] = cat_and_reorder(gss_clean['men_overwork'], 
+    ['strongly disagree', 'disagree', 'neither agree nor disagree',  'agree', 'strongly agree'])
 
 gss_clean.to_parquet("data/gss2018clean.parquet")

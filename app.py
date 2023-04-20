@@ -7,14 +7,27 @@ df = pd.read_parquet("data/gss2018clean.parquet")
 FILTER_COLS = ['satjob', 'relationship', 'male_breadwinner', 'men_bettersuited', 'child_suffer', 'men_overwork']
 STRATA_COLS = ['sex', 'region', 'education']
 
-app = Dash(__name__)
+external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
+
+app = Dash(__name__, external_stylesheets=external_stylesheets)
 application = app.server
 
 app.layout = html.Div([
     html.H1(children='2018 GSS Results', style={'textAlign':'center'}),
-    dcc.Dropdown(FILTER_COLS, 'satjob', id='dropdown-feature'),
-    dcc.Dropdown(STRATA_COLS, 'sex', id='dropdown-strata'),
-    dcc.Graph(id='graph-content')
+    html.Div(
+        id = "left-col",
+        className = "three columns",
+        children = [
+            dcc.Dropdown(FILTER_COLS, 'satjob', id='dropdown-feature'),
+            dcc.Dropdown(STRATA_COLS, 'sex', id='dropdown-strata'),
+        ]),
+    html.Div(
+        id = "right-col",
+        className = "eight columns",
+        children = [
+            dcc.Graph(id='graph-content')
+        ]
+    )
 ])
 
 @callback(
