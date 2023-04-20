@@ -1,8 +1,11 @@
 from dash import Dash, html, dcc, callback, Output, Input
 import plotly.express as px
+import plotly.io as pio
 import pandas as pd
 
 df = pd.read_parquet("data/gss2018clean.parquet")
+
+pio.templates.default = "plotly_white"
 
 # * `sex` - male or female
 # * `education` - years of formal education
@@ -30,6 +33,7 @@ LABELS = {
     'count': 'Count of Responses',
     'grppct': 'Percentage of Strata',
     'overall_pct': 'Percentage of Total Responses',
+    'rowpct': 'Percentage of Each Categorical Response',
     'male': 'Male'
 }
 
@@ -38,6 +42,10 @@ external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 app = Dash(__name__, external_stylesheets=external_stylesheets)
 application = app.server
 
+label_style = {
+    'font-weight': 'bold'
+}
+
 app.layout = html.Div([
     html.H1(children='2018 GSS Results', style={'textAlign':'center'}),
     dcc.Graph(id='graph-content'),
@@ -45,26 +53,38 @@ app.layout = html.Div([
         id = "left-col",
         className = "three columns",
         children = [
-            html.Div("Strata:"),
-            dcc.Dropdown({k: LABELS[k] for k in STRATA_COLS}, 'sex', id='dropdown-strata'),
-            dcc.RadioItems(
-                {
-                    'count': 'Count of responses',
-                    'grppct': 'Precentage of Strata',
-                    'overall_pct': 'Overall Percentage',
-                },
-                'count', 
-                inline=True,
-                id='radio-options')
+            html.Div(
+                children  =[
+                    html.Label("Strata:", style = label_style),
+                    dcc.RadioItems({k: LABELS[k] for k in STRATA_COLS}, 'sex', id='dropdown-strata'),
+                ]
+            ),
+            html.Div(
+                children = [
+                    html.Label("Y-Axis:", style = label_style),
+                    dcc.RadioItems(
+                    {
+                        'count': 'Count of responses',
+                        'grppct': 'Precentage of Strata',
+                        'rowpct': 'Percentage of Response',
+                        'overall_pct': 'Overall Percentage',
+                    },
+                    'count', 
+                    inline=True,
+                    id='radio-options')
+                ]
+            )
+
         ]),
     html.Div(
         id = "right-col",
         className = "eight columns",
         children = [
-            html.Div('Question'),
+            html.Label('Question (X-axis):', style = label_style),
             dcc.Dropdown({k: LABELS[k] for k in FILTER_COLS}, 'satjob', id='dropdown-feature')
         ]
-    )
+    ),
+    dcc.Markdown("by Andrew Barros [source](https://github.com/ajb5d/DS6001-Dashboard)", className = "offset-by-five columns")
 ])
 
 @callback(
@@ -81,15 +101,24 @@ def update_graph(feature, strata, metric):
             .rename({0: 'strata_total'}, axis = 1)
     )
 
+    row_totals = (
+        df.groupby(feature)
+            .size()
+            .reset_index()
+            .rename({0: 'row_total'}, axis = 1)
+    )
+
     figure_data = (
         df.groupby([strata, feature])
             .size()
             .reset_index()
             .rename({0: 'count'}, axis = 1)
             .join(strata_totals.set_index(strata), on = strata)
+            .join(row_totals.set_index(feature), on = feature)
     )
 
     figure_data['grppct'] = figure_data['count'] / figure_data['strata_total']
+    figure_data['rowpct'] = figure_data['count'] / figure_data['row_total']
     figure_data['overall_pct'] = figure_data['count'] / figure_data['count'].sum()
     
 
@@ -101,7 +130,7 @@ def update_graph(feature, strata, metric):
         color = strata,
         barmode='group')
     
-    if metric in ['grppct', 'overall_pct']:
+    if metric in ['grppct', 'overall_pct', 'rowpct']:
         plt.update_layout(yaxis_tickformat = '2.0~%')
 
     return plt
