@@ -2,8 +2,10 @@ from dash import Dash, html, dcc, callback, Output, Input
 import plotly.express as px
 import plotly.io as pio
 import pandas as pd
+from pathlib import Path
+THIS_FOLDER = Path(__file__).parent.resolve()
 
-df = pd.read_parquet("data/gss2018clean.parquet")
+df = pd.read_parquet(THIS_FOLDER / "data" / "gss2018clean.parquet")
 
 pio.templates.default = "plotly_white"
 
