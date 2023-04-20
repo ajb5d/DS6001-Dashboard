@@ -96,7 +96,7 @@ app.layout = html.Div([
         className = "eight columns",
         children = [
             html.Label('Question (X-axis):', style = label_style),
-            dcc.Dropdown({k: LABELS[k] for k in FILTER_COLS}, 'satjob', id='dropdown-feature')
+            dcc.Dropdown({k: LABELS[k] for k in FILTER_COLS}, 'satjob', id='dropdown-feature', optionHeight=50)
         ]
     ),
     dcc.Markdown("by Andrew Barros [source](https://github.com/ajb5d/DS6001-Dashboard)", className = "offset-by-five columns")
