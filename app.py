@@ -75,6 +75,19 @@ app.layout = html.Div([
                     inline=True,
                     id='radio-options')
                 ]
+            ),
+            html.Div(
+                children = [
+                    html.Label("Missing Responses:", style = label_style),
+                    dcc.RadioItems(
+                    {
+                        'inc': 'Include',
+                        'exc': 'Exclude',
+                    },
+                    'inc', 
+                    inline=True,
+                    id='radio-missing')
+                ]
             )
 
         ]),
@@ -93,25 +106,33 @@ app.layout = html.Div([
     Output('graph-content', 'figure'),
     Input('dropdown-feature', 'value'),
     Input('dropdown-strata', 'value'),
-    Input('radio-options', 'value')
+    Input('radio-options', 'value'),
+    Input('radio-missing', 'value')
 )
-def update_graph(feature, strata, metric):
+def update_graph(feature, strata, metric, missing):
+
+    plot_df = df
+
+    if missing is not None and missing == "exc":
+        plot_df = df[df[feature] != 'not answered'].copy()
+        plot_df[feature] = plot_df[feature].cat.remove_unused_categories()
+
     strata_totals = (
-        df.groupby(strata)
+        plot_df.groupby(strata)
             .size()
             .reset_index()
             .rename({0: 'strata_total'}, axis = 1)
     )
 
     row_totals = (
-        df.groupby(feature)
+        plot_df.groupby(feature)
             .size()
             .reset_index()
             .rename({0: 'row_total'}, axis = 1)
     )
 
     figure_data = (
-        df.groupby([strata, feature])
+        plot_df.groupby([strata, feature])
             .size()
             .reset_index()
             .rename({0: 'count'}, axis = 1)
@@ -130,7 +151,8 @@ def update_graph(feature, strata, metric):
         y=metric,
         labels = LABELS,
         color = strata,
-        barmode='group')
+        barmode='group',
+        text_auto=True)
     
     if metric in ['grppct', 'overall_pct', 'rowpct']:
         plt.update_layout(yaxis_tickformat = '2.0~%')

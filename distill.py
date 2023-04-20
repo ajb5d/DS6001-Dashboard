@@ -26,10 +26,13 @@ keep_cols = {
 gss_clean = gss[keep_cols.keys()]
 gss_clean = gss_clean.rename(keep_cols,axis=1)
 
-gss_clean.education = pd.qcut(
-    gss_clean.education,
-    q = 4,
-    labels = ['Lowest Quartile', 'Q2', 'Q3', 'Highest Quartile']
+gss_clean.education = (
+    pd.qcut(
+        gss_clean.education,
+        q = 4,
+        labels = ['Lowest Quartile', 'Q2', 'Q3', 'Highest Quartile'])
+        .cat.add_categories('not answered')
+        .fillna("not answered")
 )
 
 gss_clean.satjob = (
@@ -40,14 +43,18 @@ gss_clean.satjob = (
             'a little dissat', 
             'mod. satisfied', 
             'very satisfied'])
-        .cat.as_ordered())
+        .cat.as_ordered()
+        .cat.add_categories('not answered')
+        .fillna("not answered")
+)
 
 def cat_and_reorder(feature, levels):
     return (
         feature
-            .fillna('not answered')
             .astype('category')
-            .cat.reorder_categories(levels + ['not answered'])
+            .cat.reorder_categories(levels)
+            .cat.add_categories('not answered')
+            .fillna("not answered")
     )
 
 for col in ['relationship', 'male_breadwinner', 'child_suffer']:
