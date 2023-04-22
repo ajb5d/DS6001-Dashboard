@@ -10,6 +10,7 @@ gss = pd.read_csv(
 
 keep_cols = {
     'sex': 'sex',
+    'wtss': 'weight',
     'educ': 'education',
     'region': 'region',
     'coninc': 'income',

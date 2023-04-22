@@ -88,6 +88,19 @@ app.layout = html.Div([
                     inline=True,
                     id='radio-missing')
                 ]
+            ),
+            html.Div(
+                children = [
+                    html.Label("Use Sample Weights:", style = label_style),
+                    dcc.RadioItems(
+                    {
+                        'none': 'No',
+                        'wtss': 'Yes',
+                    },
+                    'wtss', 
+                    inline=True,
+                    id='radio-weights')
+                ]
             )
 
         ]),
@@ -107,9 +120,10 @@ app.layout = html.Div([
     Input('dropdown-feature', 'value'),
     Input('dropdown-strata', 'value'),
     Input('radio-options', 'value'),
-    Input('radio-missing', 'value')
+    Input('radio-missing', 'value'),
+    Input('radio-weights', 'value')
 )
-def update_graph(feature, strata, metric, missing):
+def update_graph(feature, strata, metric, missing, weights = "none"):
 
     plot_df = df
 
@@ -118,31 +132,36 @@ def update_graph(feature, strata, metric, missing):
         plot_df[feature] = plot_df[feature].cat.remove_unused_categories()
 
     strata_totals = (
-        plot_df.groupby(strata)
-            .size()
+        plot_df.groupby(strata)['weight']
+            .agg(['sum', 'count'])
             .reset_index()
-            .rename({0: 'strata_total'}, axis = 1)
+            .rename({'sum': 'strata_total_weights', 'count': 'strata_total'}, axis = 1)
     )
 
     row_totals = (
-        plot_df.groupby(feature)
-            .size()
+        plot_df.groupby(feature)['weight']
+            .agg(['sum', 'count'])
             .reset_index()
-            .rename({0: 'row_total'}, axis = 1)
+            .rename({'sum': 'row_total_weights', 'count': 'row_total'}, axis = 1)
     )
 
     figure_data = (
-        plot_df.groupby([strata, feature])
-            .size()
+        plot_df.groupby([strata, feature])['weight']
+            .agg(['sum', 'count'])
             .reset_index()
-            .rename({0: 'count'}, axis = 1)
+            .rename({'sum': 'total', 'count': 'count'}, axis = 1)
             .join(strata_totals.set_index(strata), on = strata)
             .join(row_totals.set_index(feature), on = feature)
     )
 
-    figure_data['grppct'] = figure_data['count'] / figure_data['strata_total']
-    figure_data['rowpct'] = figure_data['count'] / figure_data['row_total']
-    figure_data['overall_pct'] = figure_data['count'] / figure_data['count'].sum()
+    if weights == "wtss":
+        figure_data['grppct'] = figure_data['total'] / figure_data['strata_total_weights']
+        figure_data['rowpct'] = figure_data['total'] / figure_data['row_total_weights']
+        figure_data['overall_pct'] = figure_data['total'] / figure_data['total'].sum()
+    else:
+        figure_data['grppct'] = figure_data['count'] / figure_data['strata_total']
+        figure_data['rowpct'] = figure_data['count'] / figure_data['row_total']
+        figure_data['overall_pct'] = figure_data['count'] / figure_data['count'].sum()
     
 
     plt = px.bar(
